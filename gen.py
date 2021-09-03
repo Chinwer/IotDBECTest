@@ -23,7 +23,7 @@ FILES_TOTAL = int(ROWS_TOTAL / ROWS_PER_FILE)
 FILES_PER_PROCESS = int(FILES_TOTAL / NUM_PROCESS)
 
 # OUTPUT_DIR = './'
-OUTPUT_DIR = '/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/data/exception/d_0/'
+OUTPUT_DIR = '/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/data/exception/0/'
 
 # default exception PROPORTIONS
 EXCEPTION_PORPORTION = 0
