@@ -1,0 +1,1 @@
+Impact of abnormal data/data period/noise data on write/query performance and dist usage of IotDB
