@@ -119,10 +119,11 @@ modifyIotDBServerConfig() {
 
 startIoTDBServer() {
     cd ${iotdb_server_bin_path}
-    if [ ${server_pid} != -1 ]; then
+    if [ ${server_pid} != "-1" ]; then
         kill -9 ${server_pid}
     fi
-    server_pid=`nohup ./start-server.sh > /dev/null 2>&1 & | grep -oP "\s\K\d+"`
+    server_pid=`nohup ./start-server.sh >/dev/null 2>&1 & echo $!`
+    printf "server_pid${server_pid}"
 }
 
 
@@ -130,10 +131,10 @@ startIoTDBServer() {
 # $2: compression
 initResCSVFile() { 
     cd ${res_dir}
-    ep_wt="${res_dir}/${ep_wt}"
-    ep_wl="${res_dir}/${ep_wl}"
-    ep_qt="${res_dir}/${ep_qt}"
-    ep_ql="${res_dir}/${ep_ql}"
+    ep_wt="${res_dir}${ep_wt}"
+    ep_wl="${res_dir}${ep_wl}"
+    ep_qt="${res_dir}${ep_qt}"
+    ep_ql="${res_dir}${ep_ql}"
 
     if [ ! -f ${ep_wt} ]; then
         printf "${ep_header}" >> ${ep_wt}
