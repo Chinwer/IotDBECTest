@@ -119,7 +119,7 @@ modifyIotDBServerConfig() {
 
 startIoTDBServer() {
     cd ${iotdb_server_bin_path}
-    if [ server_pid != -1 ]; then
+    if [ ${server_pid} != -1 ]; then
         kill -9 ${server_pid}
     fi
     server_pid=`nohup ./start-server.sh > /dev/null 2>&1 & | grep -oP "\s\K\d+"`
