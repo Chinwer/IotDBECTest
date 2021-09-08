@@ -137,7 +137,9 @@ def main():
     pool.close()
     pool.join()
     end = datetime.now().timestamp()
-    print('Data generation finished, time usage: {:.3}s'.format(end - start))
+
+    gen_file_nums = os.popen('ls -l {} | grep ^- | wc -l'.format(OUTPUT_DIR))
+    print('{} data files generated,  time usage: {:.3}s'.format(gen_file_nums.read().rstrip('\n'), end - start))
 
 
 main()
