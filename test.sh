@@ -21,7 +21,7 @@ encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
 compression=("UNCOMPRESSED" "SNAPPY" "LZ4" "GZIP")
 
 
-ep_header="Exception Proportion, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
+ep_header=", 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
 
 
 ################################
@@ -162,11 +162,11 @@ initResCSVFile() {
         printf "${ep_header}" >> ${ep_du}
     fi
 
-    printf "\nWrite Throughput ($1_$2), " >> ${ep_wt}
-    printf "\nWrite Latency ($1_$2), " >> ${ep_wl}
-    printf "\nQuery Throughput ($1_$2), " >> ${ep_qt}
-    printf "\nQuery Latency ($1_$2), " >> ${ep_ql}
-    printf "\nDisk Usage ($1_$2), " >> ${ep_du}
+    printf "\n$1_$2, " >> ${ep_wt}
+    printf "\n$1_$2, " >> ${ep_wl}
+    printf "\n$1_$2, " >> ${ep_qt}
+    printf "\n$1_$2, " >> ${ep_ql}
+    printf "\n$1_$2, " >> ${ep_du}
 }
 
 
