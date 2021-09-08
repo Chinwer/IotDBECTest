@@ -137,7 +137,7 @@ def main():
     pool.close()
     pool.join()
     end = datetime.now().timestamp()
-    print('Data generation finished, time usage: {}s'.format(end - start))
+    print('Data generation finished, time usage: {:.3}s'.format(end - start))
 
 
 main()

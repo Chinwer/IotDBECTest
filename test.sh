@@ -26,13 +26,13 @@ ep_header="Exception Proportion, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
 # impact of exception proportion
 ################################
 # impact of exception proportion on write latency
-ep_wl="ep_wl.csv"
+ep_wl="${res_dir}ep_wl.csv"
 # impact of exception proportion on write throughput
-ep_wt="ep_wt.csv"
+ep_wt="${res_dir}ep_wt.csv"
 # impact of exception proportion on query latency
-ep_ql="ep_ql.csv"
+ep_ql="${res_dir}ep_ql.csv"
 # impact of exception proportion on query throughput
-ep_qt="ep_qt.csv"
+ep_qt="${res_dir}ep_qt.csv"
 
 
 ##########################
@@ -66,7 +66,7 @@ genData() {
     cd ${gen_data_path}
     python gen.py -p "batch" -n $1
     file_nums=`ls -l ${benchmark_data_path} | grep "^-" | wc -l`
-    printf "\n${file_nums} files generated\n\n"
+    printf "${file_nums} files generated\n"
 }
  
 
@@ -86,9 +86,9 @@ toggleTestMode () {
 
 testWriteModeThroughputLatency() {
     cd ${benchmark_bin_path}
-    res=`./benchmark.sh`
-    throughput=`echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)"`
-    avg_latency=`echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)"`
+    res=`./benchmark.sh 2>/dev/null`
+    throughput=`echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0'`
+    avg_latency=`echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0'`
     echo "throughput: " ${throughput} "average latency: " ${avg_latency}
     echo -n "${avg_latency}, " >> ${ep_wl}
     echo -n "${throughput}, " >> ${ep_wt}
@@ -97,9 +97,9 @@ testWriteModeThroughputLatency() {
 
 testTestModeThroughputLatency() {
     cd ${benchmark_bin_path}
-    res=`./benchmark.sh`
-    throughput=`echo ${res} | grep -ozP "TIME_RANGE\s+\d+\s+.*?\K(\d+\.\d+)"`
-    avg_latency=`echo ${res} | grep -ozP "TIME_RANGE\s*?\K(\d+\.\d+)"`
+    res=`./benchmark.sh 2>/dev/null`
+    throughput=`echo ${res} 2>/dev/null | grep -ozP "TIME_RANGE\s+\d+\s+.*?\K(\d+\.\d+)" | tr -d '\0'`
+    avg_latency=`echo ${res} 2>/dev/null | grep -ozP "TIME_RANGE\s*?\K(\d+\.\d+)" | tr -d '\0'`
     echo "throughput: " ${throughput} "average latency: " ${avg_latency}
     echo -n "${avg_latency}, " >> ${ep_ql}
     echo -n "${throughput}, " >> ${ep_qt}
@@ -113,7 +113,7 @@ modifyIotDBServerConfig() {
     cd ${iotdb_server_conf_path}
     sed -i -e "665c default_float_encoding=$1" \
         -e "714c compressor=$2" ${iotdb_conf_file}
-    printf "Current encoding = $1, compression = $2\n"
+    printf "\nCurrent encoding = $1, compression = $2\n"
 }
 
 
@@ -123,7 +123,6 @@ startIoTDBServer() {
         kill -9 ${server_pid}
     fi
     server_pid=`nohup ./start-server.sh >/dev/null 2>&1 & echo $!`
-    printf "server_pid${server_pid}"
 }
 
 
@@ -131,10 +130,6 @@ startIoTDBServer() {
 # $2: compression
 initResCSVFile() { 
     cd ${res_dir}
-    ep_wt="${res_dir}${ep_wt}"
-    ep_wl="${res_dir}${ep_wl}"
-    ep_qt="${res_dir}${ep_qt}"
-    ep_ql="${res_dir}${ep_ql}"
 
     if [ ! -f ${ep_wt} ]; then
         printf "${ep_header}" >> ${ep_wt}
