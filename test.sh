@@ -13,8 +13,8 @@ iotdb_server_bin_path="/home/lulu/projects/iotdb/server/target/iotdb-server-0.13
 iotdb_server_conf_path="/home/lulu/projects/iotdb/server/target/iotdb-server-0.13.0-SNAPSHOT/conf/"
 iotdb_conf_file="${iotdb_server_conf_path}iotdb-engine.properties"
 
-# result directory
-res_dir="/home/lulu/Downloads/dataset/exception_proportion/"
+ep_res_dir="/home/lulu/Downloads/dataset/exception_proportion/"
+es_res_dir="/home/lulu/Downloads/dataset/exception_size/"
 # each directory corresponds to a combination of encoding and compression 
 # dir name: encoding-compression
 encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
@@ -22,34 +22,37 @@ compression=("UNCOMPRESSED" "SNAPPY" "LZ4" "GZIP")
 
 
 ep_header=", 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
+es_header=", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10"
 
 
 ################################
 # impact of exception proportion
 ################################
 # impact of exception proportion on write latency
-ep_wl="${res_dir}ep_wl.csv"
+ep_wl="${ep_res_dir}ep_wl.csv"
 # impact of exception proportion on write throughput
-ep_wt="${res_dir}ep_wt.csv"
+ep_wt="${ep_res_dir}ep_wt.csv"
 # impact of exception proportion on query latency
-ep_ql="${res_dir}ep_ql.csv"
+ep_ql="${ep_res_dir}ep_ql.csv"
 # impact of exception proportion on query throughput
-ep_qt="${res_dir}ep_qt.csv"
+ep_qt="${ep_res_dir}ep_qt.csv"
 # impact of exception proportion on disk usage
-ep_du="${res_dir}ep_du.csv"
+ep_du="${ep_res_dir}ep_du.csv"
 
 
 ##########################
 # impact of exception size
 ##########################
 # impact of exception size on write latency
-es_wl="es_wl.csv"
+es_wl="${es_res_dir}es_wl.csv"
 # impact of exception size on write throughput
-es_wt="es_wt.csv"
+es_wt="${es_res_dir}es_wt.csv"
 # impact of exception size on query latency
-es_ql="es_ql.csv"
+es_ql="${es_res_dir}es_ql.csv"
 # impact of exception size on query throughput
-es_qt="es_qt.csv"
+es_qt="${es_res_dir}es_qt.csv"
+# impact of exception size on disk usage
+es_du="${es_res_dir}es_du.csv"
 
 
 period=(1 2 3 4 5 6 7 8 9 10)
@@ -68,7 +71,7 @@ cleanDataDir() {
 
 genData() { 
     cd ${gen_data_path}
-    python gen.py -p "batch" -n $1
+    python gen.py -p "batch" $1
     file_nums=a$(ls -l ${benchmark_data_path} | grep "^-" | wc -l)
 }
  
@@ -92,9 +95,9 @@ testWriteModeThroughputLatency() {
     res=$(./benchmark.sh 2>/dev/null)
     throughput=$(echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
     avg_latency=$(echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
-    echo "throughput: " ${throughput} "average latency: " ${avg_latency}
-    echo -n "${avg_latency}, " >> ${ep_wl}
-    echo -n "${throughput}, " >> ${ep_wt}
+    echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
+    echo -n "${avg_latency}, " >> $1
+    echo -n "${throughput}, " >> $2
 }
 
 
@@ -105,7 +108,7 @@ recordDiskUsage() {
     cd ${iotdb_data_path}
     disk_usage=$(du -s | grep -ozP "\w+" | tr -d '\0')
     echo "disk usage: ${disk_usage}KB"
-    echo -n "${disk_usage}, " >> "${ep_du}"
+    echo -n "${disk_usage}, " >> $1
 }
 
 
@@ -114,9 +117,9 @@ testTestModeThroughputLatency() {
     res=$(./benchmark.sh 2>/dev/null)
     throughput=$(echo ${res} 2>/dev/null | grep -ozP "TIME_RANGE\s+\d+\s+.*?\K(\d+\.\d+)" | tr -d '\0')
     avg_latency=$(echo ${res} 2>/dev/null | grep -ozP "TIME_RANGE\s*?\K(\d+\.\d+)" | tr -d '\0')
-    echo "throughput: " ${throughput} "average latency: " ${avg_latency}
-    echo -n "${avg_latency}, " >> ${ep_ql}
-    echo -n "${throughput}, " >> ${ep_qt}
+    echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
+    echo -n "${avg_latency}, " >> $1
+    echo -n "${throughput}, " >> $2
 }
 
 
@@ -143,8 +146,11 @@ startIoTDBServer() {
 
 # $1: encoding
 # $2: compression
-initResCSVFile() { 
-    cd ${res_dir}
+initEPResCSVFile() { 
+    if [ ! -d ${ep_res_dir} ]; then
+        mkdir ${ep_res_dir}
+    fi
+    cd ${ep_res_dir}
 
     if [ ! -f ${ep_wt} ]; then
         printf "${ep_header}" >> ${ep_wt}
@@ -170,31 +176,83 @@ initResCSVFile() {
 }
 
 
+initESResCsvFile() { 
+    if [ ! -d ${es_res_dir} ]; then
+        mkdir ${es_res_dir}
+    fi
+    cd ${es_res_dir}
+
+    if [ ! -f ${es_wt} ]; then
+        printf "${es_header}" >> ${es_wt}
+    fi
+    if [ ! -f ${es_wl} ]; then
+        printf "${es_header}" >> ${es_wl}
+    fi
+    if [ ! -f ${es_qt} ]; then
+        printf "${es_header}" >> ${es_qt}
+    fi
+    if [ ! -f ${es_ql} ]; then
+        printf "${es_header}" >> ${es_ql}
+    fi
+    if [ ! -f ${es_du} ]; then
+        printf "${es_header}" >> ${es_du}
+    fi
+
+    printf "\n$1_$2, " >> ${es_wt}
+    printf "\n$1_$2, " >> ${es_wl}
+    printf "\n$1_$2, " >> ${es_qt}
+    printf "\n$1_$2, " >> ${es_ql}
+    printf "\n$1_$2, " >> ${es_du}
+}
+
+
 testExceptionProportion() {
     echo "Begin test of exception proportion impact"
-    for e in ${encoding[@]}
-    do
-        for c in ${compression[@]}
-        do
+    for e in ${encoding[@]}; do
+        for c in ${compression[@]}; do
             modifyIotDBServerConfig ${e} ${c}
             startIoTDBServer
-            initResCSVFile ${e} ${c}
+            initEPResCSVFile ${e} ${c}
 
-            for p in ${exception_proportion[@]}
-            do
+            for p in ${exception_proportion[@]}; do
                 cleanDataDir
-                genData ${p}
+                genData "-n ${p}"
                 toggleWriteMode
                 echo "Begin write mode with exception proportion ${p}"
-                testWriteModeThroughputLatency ${res_dir} ${ep_wl} ${ep_wt}
-                recordDiskUsage
+                testWriteModeThroughputLatency ${ep_wl} ${ep_wt}
+                recordDiskUsage ${ep_du}
                 toggleTestMode
-                echo "Begin test mode with exception proportion = ${p}"
-                testTestModeThroughputLatency ${res_dir} ${ep_ql} ${ep_qt}
+                echo "Begin test mode with exception proportion ${p}"
+                testTestModeThroughputLatency ${ep_ql} ${ep_qt}
             done
         done
     done
     printf "Exception proportion test finished."
+}
+
+
+testExceptionSize() { 
+    printf "Begin test of exception size impact\n"
+    for e in ${encoding[@]}; do
+        for c in ${compression[@]}; do
+            modifyIotDBServerConfig ${e} ${c}
+            startIoTDBServer
+            initESResCsvFile ${e} ${c}
+
+            for s in ${exception_size[@]}; do
+                cleanDataDir
+                genData "-f ${s}"
+                toggleWriteMode
+                printf "Begin write mode with exception size ${s}\n"
+                testWriteModeThroughputLatency ${es_wl} ${es_wt}
+                recordDiskUsage ${es_du}
+                toggleTestMode
+                printf "Begin test mode with exception size ${s}\n"
+                testTestModeThroughputLatency ${es_ql} ${es_qt}
+            done
+        done
+    done
+    printf "Exception size test finished"
 }
 
 
@@ -210,4 +268,5 @@ onCtrlC() {
 trap 'onCtrlC' SIGINT
 
 server_pid=-1  #  pid of iotdb server
-testExceptionProportion
+# testExceptionProportion
+testExceptionSize
