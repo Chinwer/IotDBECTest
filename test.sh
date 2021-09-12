@@ -15,14 +15,20 @@ iotdb_conf_file="${iotdb_server_conf_path}iotdb-engine.properties"
 
 ep_res_dir="/home/lulu/Downloads/dataset/exception_proportion/"
 es_res_dir="/home/lulu/Downloads/dataset/exception_size/"
+dp_res_dir="/home/lulu/Downloads/dataset/data_period/"
 # each directory corresponds to a combination of encoding and compression 
 # dir name: encoding-compression
 encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
 compression=("UNCOMPRESSED" "SNAPPY" "LZ4" "GZIP")
 
+period=(1 2 3 4 5 6 7 8 9 10)
+exception_size=(1 2 3 4 5 6 7 8 9 10)
+exception_proportion=(0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
+
 
 ep_header=", 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
 es_header=", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10"
+dp_header=", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10"
 
 
 ################################
@@ -54,10 +60,14 @@ es_qt="${es_res_dir}es_qt.csv"
 # impact of exception size on disk usage
 es_du="${es_res_dir}es_du.csv"
 
-
-period=(1 2 3 4 5 6 7 8 9 10)
-exception_size=(1 2 3 4 5 6 7 8 9 10)
-exception_proportion=(0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
+#######################
+# impact of data period
+#######################
+dp_wl="${dp_res_dir}dp_wl.csv"
+dp_wt="${dp_res_dir}dp_wt.csv"
+dp_ql="${dp_res_dir}dp_ql.csv"
+dp_qt="${dp_res_dir}dp_qt.csv"
+dp_du="${dp_res_dir}dp_du.csv"
 
 
 cleanDataDir() {
@@ -107,7 +117,7 @@ recordDiskUsage() {
     echo -e "flush\nexit" | ./start-cli.sh -h localhost -p 6667 -u root -pw root >/dev/null 2>&1
     cd ${iotdb_data_path}
     disk_usage=$(du -s | grep -ozP "\w+" | tr -d '\0')
-    echo "disk usage: ${disk_usage}KB"
+    echo "disk usage: ${disk_usage} KB"
     echo -n "${disk_usage}, " >> $1
 }
 
@@ -206,6 +216,36 @@ initESResCsvFile() {
 }
 
 
+initPeriodResCsvFile() { 
+    if [ ! -d ${dp_res_dir} ]; then
+        mkdir ${dp_res_dir}
+    fi
+    cd ${dp_res_dir}
+
+    if [ ! -f ${dp_wt} ]; then
+        printf "${dp_header}" >> ${dp_wt}
+    fi
+    if [ ! -f ${dp_wl} ]; then
+        printf "${dp_header}" >> ${dp_wl}
+    fi
+    if [ ! -f ${dp_qt} ]; then
+        printf "${dp_header}" >> ${dp_qt}
+    fi
+    if [ ! -f ${dp_ql} ]; then
+        printf "${dp_header}" >> ${dp_ql}
+    fi
+    if [ ! -f ${dp_du} ]; then
+        printf "${dp_header}" >> ${dp_du}
+    fi
+
+    printf "\n$1_$2, " >> ${dp_wt}
+    printf "\n$1_$2, " >> ${dp_wl}
+    printf "\n$1_$2, " >> ${dp_qt}
+    printf "\n$1_$2, " >> ${dp_ql}
+    printf "\n$1_$2, " >> ${dp_du}
+}
+
+
 testExceptionProportion() {
     echo "Begin test of exception proportion impact"
     for e in ${encoding[@]}; do
@@ -252,7 +292,32 @@ testExceptionSize() {
             done
         done
     done
-    printf "Exception size test finished"
+    printf "Exception size test finished\n"
+}
+
+
+testPeriod() { 
+    printf "Begin test of data period\n"
+    for e in ${encoding[@]}; do
+        for c in ${compression[@]}; do
+            modifyIotDBServerConfig ${e} ${c}
+            startIoTDBServer
+            initPeriodResCsvFile ${e} ${c}
+
+            for p in ${period[@]}; do
+                cleanDataDir
+                genData "-c ${p}"
+                toggleWriteMode
+                printf "Begin write mode with data period ${p}\n"
+                testWriteModeThroughputLatency ${dp_wl} ${dp_wt}
+                recordDiskUsage ${dp_du}
+                toggleTestMode
+                printf "Begin test mode with data period ${p}\n"
+                testTestModeThroughputLatency ${dp_ql} ${dp_qt}
+            done
+        done
+    done
+    printf "Data period test finished\n"
 }
 
 
@@ -269,4 +334,5 @@ trap 'onCtrlC' SIGINT
 
 server_pid=-1  #  pid of iotdb server
 # testExceptionProportion
-testExceptionSize
+# testExceptionSize
+testPeriod
