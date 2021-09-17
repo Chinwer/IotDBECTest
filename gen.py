@@ -81,9 +81,7 @@ def genException(y):
     # indices of generated abnormal data
     indices = random.sample(range(1, len(y)), int(proportion * len(y)))
     for i in indices:
-        rand = random.uniform(1 / factor, 1) \
-            if random.random() >= 0.5 \
-            else random.uniform(1, factor)
+        rand = random.uniform(1, factor)
         y[i] *= rand
         
 

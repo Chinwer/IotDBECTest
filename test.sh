@@ -22,7 +22,7 @@ encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
 compression=("UNCOMPRESSED" "SNAPPY" "LZ4" "GZIP")
 
 period=(1 2 3 4 5 6 7 8 9 10)
-exception_size=(1 2 3 4 5 6 7 8 9 10)
+exception_size=(1 2 4 8 16 32 64 128 256 512 1024)
 exception_proportion=(0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
 
 
@@ -103,11 +103,11 @@ toggleTestMode () {
 testWriteModeThroughputLatency() {
     cd ${benchmark_bin_path}
     res=$(./benchmark.sh 2>/dev/null)
-    throughput=$(echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
-    avg_latency=$(echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
-    echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
-    echo -n "${avg_latency}, " >> $1
-    echo -n "${throughput}, " >> $2
+    # throughput=$(echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
+    # avg_latency=$(echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
+    # echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
+    # echo -n "${avg_latency}, " >> $1
+    # echo -n "${throughput}, " >> $2
 }
 
 
@@ -286,9 +286,10 @@ testExceptionSize() {
                 printf "Begin write mode with exception size ${s}\n"
                 testWriteModeThroughputLatency ${es_wl} ${es_wt}
                 recordDiskUsage ${es_du}
-                toggleTestMode
-                printf "Begin test mode with exception size ${s}\n"
-                testTestModeThroughputLatency ${es_ql} ${es_qt}
+
+                # toggleTestMode
+                # printf "Begin test mode with exception size ${s}\n"
+                # testTestModeThroughputLatency ${es_ql} ${es_qt}
             done
         done
     done
@@ -334,5 +335,5 @@ trap 'onCtrlC' SIGINT
 
 server_pid=-1  #  pid of iotdb server
 # testExceptionProportion
-# testExceptionSize
-testPeriod
+testExceptionSize
+# testPeriod
