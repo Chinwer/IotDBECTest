@@ -26,7 +26,7 @@ FILES_PER_PROCESS = int(FILES_TOTAL / NUM_PROCESS)
 OUTPUT_DIR = '/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/data/exception/0/'
 
 # default exception PROPORTIONS
-EXCEPTION_PORPORTION = 0
+EXCEPTION_PORPORTION = 0.1
 # default exception size factor (exception size: [norm_val / factor, norm_val * factor])
 EXCEPTION_FACTOR = 2
 # default period factor
