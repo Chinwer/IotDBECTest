@@ -2,10 +2,9 @@ iotdb_cli_bin_path="/home/lulu/projects/iotdb/cli/target/iotdb-cli-0.13.0-SNAPSH
 iotdb_server_bin_path="/home/lulu/projects/iotdb/server/target/iotdb-server-0.13.0-SNAPSHOT/sbin/"
 iotdb_data_path="/home/lulu/projects/iotdb/server/target/iotdb-server-0.13.0-SNAPSHOT/data/data/sequence/root.test.g_0/"
 
-gen_data_path="/home/lulu/Downloads/dataset/"
+gen_data_path="/home/lulu/projects/IoTDBECTest/"
 
 benchmark_bin_path="/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/"
-benchmark_data_path="/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/data/exception/0/"
 benchmark_conf_path="/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/conf/"
 benchmark_conf_file="${benchmark_conf_path}config.properties"
 
@@ -13,9 +12,9 @@ iotdb_server_bin_path="/home/lulu/projects/iotdb/server/target/iotdb-server-0.13
 iotdb_server_conf_path="/home/lulu/projects/iotdb/server/target/iotdb-server-0.13.0-SNAPSHOT/conf/"
 iotdb_conf_file="${iotdb_server_conf_path}iotdb-engine.properties"
 
-ep_res_dir="/home/lulu/Downloads/dataset/exception_proportion/"
-es_res_dir="/home/lulu/Downloads/dataset/exception_size/"
-dp_res_dir="/home/lulu/Downloads/dataset/data_period/"
+ep_res_dir="/home/lulu/projects/IoTDBECTest/exception_proportion/"
+es_res_dir="/home/lulu/projects/IoTDBECTest/exception_size/"
+dp_res_dir="/home/lulu/projects/IoTDBECTest/data_period/"
 # each directory corresponds to a combination of encoding and compression 
 # dir name: encoding-compression
 encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
@@ -79,35 +78,56 @@ cleanDataDir() {
 }
 
 
+cleanResDir() {
+    cd ${dp_res_dir}
+    rm -f *.csv
+}
+
+
 genData() { 
     cd ${gen_data_path}
     python gen.py -p "batch" $1
-    file_nums=a$(ls -l ${benchmark_data_path} | grep "^-" | wc -l)
+}
+
+
+genDataForPeriodTest() {
+    data_dir="/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/data/period"
+
+    for p in ${period[@]}; do
+        dest="${data_dir}${p}/0/"
+        if [ ! -d dest ]; then
+            mkdir -p ${dest}
+        fi
+        genData "-c ${p} -o ${dest}"
+    done
 }
  
 
 toggleWriteMode() {
-    sed -i -e "49c # BENCHMARK_WORK_MODE=testWithDefaultPath" \
-        -e "50c BENCHMARK_WORK_MODE=verificationWriteMode" \
-        -e "31c IS_DELETE_DATA=true" ${benchmark_conf_file}
+    sed -i -e "41c # BENCHMARK_WORK_MODE=testWithDefaultPath" \
+        -e "42c BENCHMARK_WORK_MODE=verificationWriteMode" \
+        -e "125c FILE_PATH = data/$1" \
+        -e "126c DATASET = $1" \
+        -e "23c IS_DELETE_DATA=true" ${benchmark_conf_file}
 }
 
 
 toggleTestMode () {
-    sed -i -e "49c BENCHMARK_WORK_MODE=testWithDefaultPath" \
-        -e "50c # BENCHMARK_WORK_MODE=verificationWriteMode" \
-        -e "31c IS_DELETE_DATA=false" ${benchmark_conf_file}
+    sed -i -e "41c BENCHMARK_WORK_MODE=testWithDefaultPath" \
+        -e "42c # BENCHMARK_WORK_MODE=verificationWriteMode" \
+        -e "23c IS_DELETE_DATA=false" ${benchmark_conf_file}
 }
 
 
 testWriteModeThroughputLatency() {
     cd ${benchmark_bin_path}
     res=$(./benchmark.sh 2>/dev/null)
-    # throughput=$(echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
-    # avg_latency=$(echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
-    # echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
-    # echo -n "${avg_latency}, " >> $1
-    # echo -n "${throughput}, " >> $2
+    # printf ${res}
+    throughput=$(echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
+    avg_latency=$(echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
+    echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
+    echo -n "${avg_latency}, " >> $1
+    echo -n "${throughput}, " >> $2
 }
 
 
@@ -301,20 +321,21 @@ testPeriod() {
     printf "Begin test of data period\n"
     for e in ${encoding[@]}; do
         for c in ${compression[@]}; do
+            # e="PLAIN"
+            # c="UNCOMPRESSED"
+            # p="1"
             modifyIotDBServerConfig ${e} ${c}
             startIoTDBServer
             initPeriodResCsvFile ${e} ${c}
 
             for p in ${period[@]}; do
-                cleanDataDir
-                genData "-c ${p}"
-                toggleWriteMode
+                toggleWriteMode "period${p}"
                 printf "Begin write mode with data period ${p}\n"
                 testWriteModeThroughputLatency ${dp_wl} ${dp_wt}
                 recordDiskUsage ${dp_du}
-                toggleTestMode
-                printf "Begin test mode with data period ${p}\n"
-                testTestModeThroughputLatency ${dp_ql} ${dp_qt}
+                # toggleTestMode
+                # printf "Begin test mode with data period ${p}\n"
+                # testTestModeThroughputLatency ${dp_ql} ${dp_qt}
             done
         done
     done
@@ -335,5 +356,7 @@ trap 'onCtrlC' SIGINT
 
 server_pid=-1  #  pid of iotdb server
 # testExceptionProportion
-testExceptionSize
-# testPeriod
+# testExceptionSize
+# genDataForPeriodTest
+cleanDataDir
+testPeriod

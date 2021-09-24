@@ -16,14 +16,11 @@ AMPLITUDE = 10
 # process numbers
 NUM_PROCESS = 8
 # stored in multiple files
-ROWS_TOTAL = 1e7
-ROWS_PER_FILE = 10000
+ROWS_TOTAL = 1e8
+ROWS_PER_FILE = 100000
 
 FILES_TOTAL = int(ROWS_TOTAL / ROWS_PER_FILE)
 FILES_PER_PROCESS = int(FILES_TOTAL / NUM_PROCESS)
-
-# OUTPUT_DIR = './'
-OUTPUT_DIR = '/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/data/exception/0/'
 
 # default exception PROPORTIONS
 EXCEPTION_PORPORTION = 0.1
@@ -46,6 +43,13 @@ def arg_parse():
         required=True,
         dest='prefix',
         help='output file name prefix'
+    )
+    parser.add_argument(
+        '-o',
+        '--output',
+        required=True,
+        dest='output',
+        help='output directory'
     )
     parser.add_argument(
         '-n', 
@@ -110,7 +114,7 @@ def generate(idx, y):
             's_1': labels
         })
 
-        filename = '{}_{}.txt'.format(OUTPUT_DIR + prefix, idx * FILES_PER_PROCESS + i)
+        filename = '{}_{}.txt'.format(args.output + prefix, idx * FILES_PER_PROCESS + i)
         df.to_csv(filename, index=False, sep=' ')
         # print('Process {}: file {} generated.'.format(os.getpid(), filename))
 
@@ -136,7 +140,7 @@ def main():
     pool.join()
     end = datetime.now().timestamp()
 
-    gen_file_nums = os.popen('ls -l {} | grep ^- | wc -l'.format(OUTPUT_DIR))
+    gen_file_nums = os.popen('ls -l {} | grep ^- | wc -l'.format(args.output))
     print('{} data files generated,  time usage: {:.3}s'.format(gen_file_nums.read().rstrip('\n'), end - start))
 
 
