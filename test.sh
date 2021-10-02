@@ -21,7 +21,7 @@ encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
 compression=("UNCOMPRESSED" "SNAPPY" "LZ4" "GZIP")
 
 period=(1 2 3 4 5 6 7 8 9 10)
-exception_size=(1 2 4 8 16 32 64 128 256 512 1024)
+exception_size=(512)
 exception_proportion=(0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
 
 
@@ -87,6 +87,19 @@ cleanResDir() {
 genData() { 
     cd ${gen_data_path}
     python gen.py -p "batch" $1
+}
+
+
+genDataForExceptionSizeTest() {
+    data_dir="/home/lulu/projects/iotdb-benchmark/iotdb-0.12/target/iotdb-0.12-0.0.1/data/es"
+
+    for s in ${exception_size[@]}; do
+        dest="${data_dir}${s}/0/"
+        if [ ! -d dest ]; then
+            mkdir -p ${dest}
+        fi
+        genData "-f ${s} -o ${dest}"
+    done
 }
 
 
@@ -293,16 +306,14 @@ testExceptionProportion() {
 
 testExceptionSize() { 
     printf "Begin test of exception size impact\n"
-    for e in ${encoding[@]}; do
-        for c in ${compression[@]}; do
-            modifyIotDBServerConfig ${e} ${c}
-            startIoTDBServer
-            initESResCsvFile ${e} ${c}
+    # for e in ${encoding[@]}; do
+    #     for c in ${compression[@]}; do
+    #         modifyIotDBServerConfig ${e} ${c}
+    #         startIoTDBServer
+    #         initESResCsvFile ${e} ${c}
 
             for s in ${exception_size[@]}; do
-                cleanDataDir
-                genData "-f ${s}"
-                toggleWriteMode
+                toggleWriteMode "es${s}"
                 printf "Begin write mode with exception size ${s}\n"
                 testWriteModeThroughputLatency ${es_wl} ${es_wt}
                 recordDiskUsage ${es_du}
@@ -311,8 +322,8 @@ testExceptionSize() {
                 # printf "Begin test mode with exception size ${s}\n"
                 # testTestModeThroughputLatency ${es_ql} ${es_qt}
             done
-        done
-    done
+    #     done
+    # done
     printf "Exception size test finished\n"
 }
 
@@ -321,9 +332,6 @@ testPeriod() {
     printf "Begin test of data period\n"
     for e in ${encoding[@]}; do
         for c in ${compression[@]}; do
-            # e="PLAIN"
-            # c="UNCOMPRESSED"
-            # p="1"
             modifyIotDBServerConfig ${e} ${c}
             startIoTDBServer
             initPeriodResCsvFile ${e} ${c}
@@ -355,8 +363,8 @@ onCtrlC() {
 trap 'onCtrlC' SIGINT
 
 server_pid=-1  #  pid of iotdb server
-# testExceptionProportion
-# testExceptionSize
 # genDataForPeriodTest
-cleanDataDir
-testPeriod
+# genDataForExceptionSizeTest
+# testExceptionProportion
+testExceptionSize
+# testPeriod
