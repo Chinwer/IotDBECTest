@@ -21,7 +21,7 @@ encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
 compression=("UNCOMPRESSED" "SNAPPY" "LZ4" "GZIP")
 
 period=(1 2 3 4 5 6 7 8 9 10)
-exception_size=(512)
+exception_size=(1 2 4 8 16 32 64 128 256 512 1024)
 exception_proportion=(0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
 
 
@@ -98,7 +98,7 @@ genDataForExceptionSizeTest() {
         if [ ! -d dest ]; then
             mkdir -p ${dest}
         fi
-        genData "-f ${s} -o ${dest}"
+        genData "-i origin.csv -f ${s} -o ${dest}"
     done
 }
 
@@ -135,7 +135,6 @@ toggleTestMode () {
 testWriteModeThroughputLatency() {
     cd ${benchmark_bin_path}
     res=$(./benchmark.sh 2>/dev/null)
-    # printf ${res}
     throughput=$(echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
     avg_latency=$(echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
     echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
@@ -166,10 +165,10 @@ testTestModeThroughputLatency() {
 }
 
 
-# modify IotDB server configuration
+# modify IoTDB server configuration
 #   $1: encoding
 #   $2: compression
-modifyIotDBServerConfig() {
+modifyIoTDBServerConfig() {
     cd ${iotdb_server_conf_path}
     sed -i -e "665c default_float_encoding=$1" \
         -e "714c compressor=$2" ${iotdb_conf_file}
@@ -308,7 +307,7 @@ testExceptionSize() {
     printf "Begin test of exception size impact\n"
     # for e in ${encoding[@]}; do
     #     for c in ${compression[@]}; do
-    #         modifyIotDBServerConfig ${e} ${c}
+    #         modifyIoTDBServerConfig ${e} ${c}
     #         startIoTDBServer
     #         initESResCsvFile ${e} ${c}
 
@@ -318,11 +317,11 @@ testExceptionSize() {
                 testWriteModeThroughputLatency ${es_wl} ${es_wt}
                 recordDiskUsage ${es_du}
 
-                # toggleTestMode
-                # printf "Begin test mode with exception size ${s}\n"
-                # testTestModeThroughputLatency ${es_ql} ${es_qt}
+                toggleTestMode
+                printf "Begin test mode with exception size ${s}\n"
+                testTestModeThroughputLatency ${es_ql} ${es_qt}
             done
-    #     done
+        # done
     # done
     printf "Exception size test finished\n"
 }
@@ -332,7 +331,7 @@ testPeriod() {
     printf "Begin test of data period\n"
     for e in ${encoding[@]}; do
         for c in ${compression[@]}; do
-            modifyIotDBServerConfig ${e} ${c}
+            modifyIoTDBServerConfig ${e} ${c}
             startIoTDBServer
             initPeriodResCsvFile ${e} ${c}
 

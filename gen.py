@@ -11,19 +11,22 @@ from datetime import datetime
 
 
 OFFSET = 2
-PERIOD = 10000
 AMPLITUDE = 10
 # process numbers
 NUM_PROCESS = 8
 # stored in multiple files
-ROWS_TOTAL = 1e8
-ROWS_PER_FILE = 100000
+# ROWS_TOTAL = 1e8
+# ROWS_PER_FILE = 100000
+# PERIOD = 10000
+ROWS_TOTAL = 7384000
+ROWS_PER_FILE = 7384
+PERIOD = 7384
 
 FILES_TOTAL = int(ROWS_TOTAL / ROWS_PER_FILE)
 FILES_PER_PROCESS = int(FILES_TOTAL / NUM_PROCESS)
 
 # default exception PROPORTIONS
-EXCEPTION_PORPORTION = 0.1
+EXCEPTION_PROPORTION = 0.1
 # default exception size factor (exception size: [norm_val / factor, norm_val * factor])
 EXCEPTION_FACTOR = 2
 # default period factor
@@ -75,12 +78,19 @@ def arg_parse():
         type=int,
         help='data period'
     )
+    parser.add_argument(
+        '-i',
+        '--input',
+        required=False,
+        dest='input',
+        help='input data file'
+    )
     args = parser.parse_args()
     
 
 def genException(y):
     factor = args.factor if args.factor else EXCEPTION_FACTOR
-    proportion = args.proportion if args.proportion else EXCEPTION_PORPORTION
+    proportion = args.proportion if args.proportion else EXCEPTION_PROPORTION
 
     # indices of generated abnormal data
     indices = random.sample(range(1, len(y)), int(proportion * len(y)))
@@ -119,12 +129,26 @@ def generate(idx, y):
         # print('Process {}: file {} generated.'.format(os.getpid(), filename))
 
 
+def read_y_from_file():
+    filename = args.input
+    df = pd.read_csv(filename, encoding='utf-8')
+    return df['value'].to_numpy()
+
+
+def gen_sin_wave():
+    x = np.arange(PERIOD).astype(float)
+    y = AMPLITUDE * np.sin(2 * np.pi * x / PERIOD) + OFFSET
+    return y
+
 def main():
     global args
     arg_parse()
 
-    x = np.arange(PERIOD).astype(float)
-    y = AMPLITUDE * np.sin(2 * np.pi * x / PERIOD) + OFFSET
+    if args.input:
+        y = read_y_from_file()
+    else:
+        y = gen_sin_wave()
+
     if args.proportion or args.factor:
         genException(y)
     # accurate to three decimal places
