@@ -17,8 +17,8 @@ es_res_dir="/home/lulu/projects/IoTDBECTest/exception_size/"
 dp_res_dir="/home/lulu/projects/IoTDBECTest/data_period/"
 # each directory corresponds to a combination of encoding and compression 
 # dir name: encoding-compression
-encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
-compression=("UNCOMPRESSED" "SNAPPY")
+encoding=("RLE" "GORILLA")
+
 
 period=(1 2 3 4 5 6 7 8 9 10)
 exception_size=(1 2 4 8 16 32 64 128 256 512 1024)
