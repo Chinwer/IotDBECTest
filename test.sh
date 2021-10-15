@@ -18,7 +18,7 @@ dp_res_dir="/home/lulu/projects/IoTDBECTest/data_period/"
 # each directory corresponds to a combination of encoding and compression 
 # dir name: encoding-compression
 encoding=("PLAIN" "TS_2DIFF" "RLE" "GORILLA")
-compression=("UNCOMPRESSED" "SNAPPY" "LZ4" "GZIP")
+compression=("UNCOMPRESSED" "SNAPPY")
 
 period=(1 2 3 4 5 6 7 8 9 10)
 exception_size=(1 2 4 8 16 32 64 128 256 512 1024)
@@ -134,9 +134,21 @@ toggleTestMode () {
 
 testWriteModeThroughputLatency() {
     cd ${benchmark_bin_path}
-    res=$(./benchmark.sh 2>/dev/null)
-    throughput=$(echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
-    avg_latency=$(echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
+
+    local throughput=0
+    local avg_latency=0
+
+    for ((i = 1; i <= ${exp_times}; i++)); do
+        local res=$(./benchmark.sh 2>/dev/null)
+        local t=$(echo ${res} | grep -ozP "throughput(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
+        throughput=$(echo "${t} + ${throughput}" | bc)
+        local a=$(echo ${res} | grep -ozP "AVG(\n|.)*?\K(\d+\.\d+)" | tr -d '\0')
+        avg_latency=$(echo "${a} + ${avg_latency}" | bc)
+    done
+
+    throughput=$(echo "scale=2; ${throughput} / ${exp_times}" | bc)
+    avg_latency=$(echo "scale=2; ${avg_latency} / ${exp_times}" | bc)
+
     echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
     echo -n "${avg_latency}, " >> $1
     echo -n "${throughput}, " >> $2
@@ -156,9 +168,21 @@ recordDiskUsage() {
 
 testTestModeThroughputLatency() {
     cd ${benchmark_bin_path}
-    res=$(./benchmark.sh 2>/dev/null)
-    throughput=$(echo ${res} 2>/dev/null | grep -ozP "TIME_RANGE\s+\d+\s+.*?\K(\d+\.\d+)" | tr -d '\0')
-    avg_latency=$(echo ${res} 2>/dev/null | grep -ozP "TIME_RANGE\s*?\K(\d+\.\d+)" | tr -d '\0')
+
+    local throughput=0
+    local avg_latency=0
+
+    for ((i = 1; i <= ${exp_times}; i++)); do
+        local res=$(./benchmark.sh 2>/dev/null)
+        local t=$(echo ${res} 2>/dev/null | grep -ozP "TIME_RANGE\s+\d+\s+.*?\K(\d+\.\d+)" | tr -d '\0')
+        throughput=$(echo "${t} + ${throughput}" | bc)
+        local a=$(echo ${res} 2>/dev/null | grep -ozP "TIME_RANGE\s*?\K(\d+\.\d+)" | tr -d '\0')
+        avg_latency=$(echo "${a} + ${avg_latency}" | bc)
+    done
+
+    throughput=$(echo "scale=2; ${throughput} / ${exp_times}" | bc)
+    avg_latency=$(echo "scale=2; ${avg_latency} / ${exp_times}" | bc)
+
     echo "throughput: " ${throughput} points/s, "average latency: " ${avg_latency} "s"
     echo -n "${avg_latency}, " >> $1
     echo -n "${throughput}, " >> $2
@@ -200,9 +224,6 @@ initEPResCSVFile() {
         if [ ! -f ${file} ]; then
             printf "${ep_header}" >> ${file}
             printf "\n$1_$2, " >> ${file}
-        else
-            sed -i -e "2,\$d" ${file}
-            printf "$1_$2, " >> ${file}
         fi
     done
 }
@@ -219,11 +240,8 @@ initESResCsvFile() {
     for file in ${files[@]}; do
         if [ ! -f ${file} ]; then
             printf "${es_header}" >> ${file}
-            printf "\n$1_$2, " >> ${file}
-        else
-            sed -i -e "2,\$d" ${file}
-            printf "$1_$2, " >> ${file}
         fi
+        printf "\n$1_$2, " >> ${file}
     done
 }
 
@@ -240,9 +258,6 @@ initPeriodResCsvFile() {
         if [ ! -f ${file} ]; then
             printf "${dp_header}" >> ${file}
             printf "\n$1_$2, " >> ${file}
-        else
-            sed -i -e "2,\$d" ${file}
-            printf "$1_$2, " >> ${file}
         fi
     done
 }
@@ -335,6 +350,7 @@ onCtrlC() {
 trap 'onCtrlC' SIGINT
 
 server_pid=-1  #  pid of iotdb server
+exp_times=3  # number of tests to be executed to get an average test result
 # genDataForPeriodTest
 # genDataForExceptionSizeTest
 # testExceptionProportion
