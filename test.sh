@@ -194,27 +194,17 @@ initEPResCSVFile() {
     fi
     cd ${ep_res_dir}
 
-    if [ ! -f ${ep_wt} ]; then
-        printf "${ep_header}" >> ${ep_wt}
-    fi
-    if [ ! -f ${ep_wl} ]; then
-        printf "${ep_header}" >> ${ep_wl}
-    fi
-    if [ ! -f ${ep_qt} ]; then
-        printf "${ep_header}" >> ${ep_qt}
-    fi
-    if [ ! -f ${ep_ql} ]; then
-        printf "${ep_header}" >> ${ep_ql}
-    fi
-    if [ ! -f ${ep_du} ]; then
-        printf "${ep_header}" >> ${ep_du}
-    fi
+    filep=(${ep_wt} ${ep_wl} ${ep_qt} ${ep_ql} ${ep_du})
 
-    printf "\n$1_$2, " >> ${ep_wt}
-    printf "\n$1_$2, " >> ${ep_wl}
-    printf "\n$1_$2, " >> ${ep_qt}
-    printf "\n$1_$2, " >> ${ep_ql}
-    printf "\n$1_$2, " >> ${ep_du}
+    for file in ${files[@]}; do
+        if [ ! -f ${file} ]; then
+            printf "${ep_header}" >> ${file}
+            printf "\n$1_$2, " >> ${file}
+        else
+            sed -i -e "2,\$d" ${file}
+            printf "$1_$2, " >> ${file}
+        fi
+    done
 }
 
 
@@ -224,27 +214,17 @@ initESResCsvFile() {
     fi
     cd ${es_res_dir}
 
-    if [ ! -f ${es_wt} ]; then
-        printf "${es_header}" >> ${es_wt}
-    fi
-    if [ ! -f ${es_wl} ]; then
-        printf "${es_header}" >> ${es_wl}
-    fi
-    if [ ! -f ${es_qt} ]; then
-        printf "${es_header}" >> ${es_qt}
-    fi
-    if [ ! -f ${es_ql} ]; then
-        printf "${es_header}" >> ${es_ql}
-    fi
-    if [ ! -f ${es_du} ]; then
-        printf "${es_header}" >> ${es_du}
-    fi
+    files=(${es_wt} ${es_wl} ${es_qt} ${es_ql} ${es_du})
 
-    printf "\n$1_$2, " >> ${es_wt}
-    printf "\n$1_$2, " >> ${es_wl}
-    printf "\n$1_$2, " >> ${es_qt}
-    printf "\n$1_$2, " >> ${es_ql}
-    printf "\n$1_$2, " >> ${es_du}
+    for file in ${files[@]}; do
+        if [ ! -f ${file} ]; then
+            printf "${es_header}" >> ${file}
+            printf "\n$1_$2, " >> ${file}
+        else
+            sed -i -e "2,\$d" ${file}
+            printf "$1_$2, " >> ${file}
+        fi
+    done
 }
 
 
@@ -254,27 +234,17 @@ initPeriodResCsvFile() {
     fi
     cd ${dp_res_dir}
 
-    if [ ! -f ${dp_wt} ]; then
-        printf "${dp_header}" >> ${dp_wt}
-    fi
-    if [ ! -f ${dp_wl} ]; then
-        printf "${dp_header}" >> ${dp_wl}
-    fi
-    if [ ! -f ${dp_qt} ]; then
-        printf "${dp_header}" >> ${dp_qt}
-    fi
-    if [ ! -f ${dp_ql} ]; then
-        printf "${dp_header}" >> ${dp_ql}
-    fi
-    if [ ! -f ${dp_du} ]; then
-        printf "${dp_header}" >> ${dp_du}
-    fi
+    files=(${dp_wt} ${dp_wl} ${dp_qt} ${dp_ql} ${dp_du})
 
-    printf "\n$1_$2, " >> ${dp_wt}
-    printf "\n$1_$2, " >> ${dp_wl}
-    printf "\n$1_$2, " >> ${dp_qt}
-    printf "\n$1_$2, " >> ${dp_ql}
-    printf "\n$1_$2, " >> ${dp_du}
+    for file in ${files[@]}; do
+        if [ ! -f ${file} ]; then
+            printf "${dp_header}" >> ${file}
+            printf "\n$1_$2, " >> ${file}
+        else
+            sed -i -e "2,\$d" ${file}
+            printf "$1_$2, " >> ${file}
+        fi
+    done
 }
 
 
@@ -305,11 +275,14 @@ testExceptionProportion() {
 
 testExceptionSize() { 
     printf "Begin test of exception size impact\n"
-    # for e in ${encoding[@]}; do
-    #     for c in ${compression[@]}; do
-    #         modifyIoTDBServerConfig ${e} ${c}
-    #         startIoTDBServer
-    #         initESResCsvFile ${e} ${c}
+    for e in ${encoding[@]}; do
+        for c in ${compression[@]}; do
+            modifyIoTDBServerConfig ${e} ${c}
+            startIoTDBServer
+            initESResCsvFile ${e} ${c}
+
+            # VERY IMPORTANT!
+            sleep 1  # comment this line will cause thrift connection refuse error
 
             for s in ${exception_size[@]}; do
                 toggleWriteMode "es${s}"
@@ -321,8 +294,8 @@ testExceptionSize() {
                 printf "Begin test mode with exception size ${s}\n"
                 testTestModeThroughputLatency ${es_ql} ${es_qt}
             done
-        # done
-    # done
+        done
+    done
     printf "Exception size test finished\n"
 }
 
