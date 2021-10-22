@@ -28,7 +28,7 @@ FILES_PER_PROCESS = int(FILES_TOTAL / NUM_PROCESS)
 # default exception PROPORTIONS
 EXCEPTION_PROPORTION = 0.1
 # default exception size factor (exception size: [norm_val / factor, norm_val * factor])
-EXCEPTION_FACTOR = 2
+EXCEPTION_FACTOR = 256
 # default period factor
 PERIOD_FACTOR = 1
 
